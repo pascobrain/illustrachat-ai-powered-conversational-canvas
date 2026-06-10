@@ -4,16 +4,20 @@ import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from '@/lib/markdown-renderer';
 import { Copy, Check, Wrench, CloudSun, Trash2, ChevronDown, ChevronUp, Code, Database, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatTime } from '@/lib/chat';
 import { useChatMessages } from '@/hooks/use-chat-messages';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { motion, AnimatePresence } from 'framer-motion';
+const TOOL_ICONS: Record<string, any> = { 
+  weather: CloudSun, 
+  search: Search, 
+  db: Database, 
+  sql: Database 
+};
 const ToolCard = ({ tool }: { tool: ToolCall }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const icons: Record<string, any> = { weather: CloudSun, search: Search, db: Database, sql: Database };
-  const Icon = Object.entries(icons).find(([k]) => tool.name.includes(k))?.[1] || Wrench;
+  const Icon = Object.entries(TOOL_ICONS).find(([k]) => tool.name.includes(k))?.[1] || Wrench;
   return (
     <div className="w-full bg-accent/30 rounded-2xl border border-border/40 overflow-hidden text-xs my-2">
       <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-accent/50 transition-colors">
@@ -26,8 +30,18 @@ const ToolCard = ({ tool }: { tool: ToolCall }) => {
       <AnimatePresence>
         {isOpen && (
           <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden border-t border-border/20 bg-background/30 p-4 space-y-3">
-             <pre className="p-2 bg-muted/40 rounded-lg overflow-x-auto text-[10px] font-mono">{JSON.stringify(tool.arguments, null, 2)}</pre>
-             {tool.result && <div className="p-2 bg-turquoise/5 rounded-lg border border-turquoise/10 text-[11px]">{typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}</div>}
+             <div className="space-y-1">
+               <span className="text-[9px] uppercase font-bold opacity-40">Arguments</span>
+               <pre className="p-2 bg-muted/40 rounded-lg overflow-x-auto text-[10px] font-mono">{JSON.stringify(tool.arguments, null, 2)}</pre>
+             </div>
+             {tool.result && (
+               <div className="space-y-1">
+                 <span className="text-[9px] uppercase font-bold opacity-40">Result</span>
+                 <div className="p-2 bg-turquoise/5 rounded-lg border border-turquoise/10 text-[11px] max-h-40 overflow-y-auto">
+                   {typeof tool.result === 'string' ? tool.result : <pre className="font-mono text-[10px]">{JSON.stringify(tool.result, null, 2)}</pre>}
+                 </div>
+               </div>
+             )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -53,8 +67,14 @@ export function ChatMessage({ message }: { message: Message }) {
       <div className={cn("relative max-w-[85%] space-y-2", isUser ? "items-end" : "items-start")}>
         <div className={cn("px-6 py-5 rounded-[2rem] shadow-soft relative border transition-all", isUser ? "bg-coral-red/5 border-coral-red/10 rounded-tr-none" : "bg-card border-border rounded-tl-none")}>
           <div className={cn("absolute -top-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10", isUser ? "right-6" : "left-6")}>
-            <Button variant="secondary" size="icon" className="h-7 w-7 rounded-full shadow-sm" onClick={handleCopy}>{copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}</Button>
-            {!isStreaming && <Button variant="secondary" size="icon" className="h-7 w-7 rounded-full shadow-sm hover:text-destructive" onClick={() => activeSessionId && deleteMessage(activeSessionId, message.id)}><Trash2 className="w-3.5 h-3.5" /></Button>}
+            <Button variant="secondary" size="icon" className="h-7 w-7 rounded-full shadow-sm" onClick={handleCopy}>
+              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            </Button>
+            {!isStreaming && (
+              <Button variant="secondary" size="icon" className="h-7 w-7 rounded-full shadow-sm hover:text-destructive" onClick={() => activeSessionId && deleteMessage(activeSessionId, message.id)}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
           </div>
           <div className={cn("prose prose-sm dark:prose-invert max-w-none", isStreaming && "after:content-['|'] after:inline-block after:animate-pulse after:text-turquoise")}>
             {!message.content && isStreaming ? (

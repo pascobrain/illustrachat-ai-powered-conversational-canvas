@@ -6,6 +6,7 @@ interface ChatMessagesState {
   messages: Message[];
   isProcessing: boolean;
   streamingMessage: string | null;
+  currentModel: string | null;
   abortController: AbortController | null;
   loadMessages: (sessionId: string) => Promise<void>;
   sendMessage: (sessionId: string, text: string, model?: string) => Promise<void>;
@@ -17,11 +18,15 @@ export const useChatMessages = create<ChatMessagesState>((set, get) => ({
   messages: [],
   isProcessing: false,
   streamingMessage: null,
+  currentModel: null,
   abortController: null,
   loadMessages: async (sessionId: string) => {
     const res = await chatService.getMessages(sessionId);
     if (res.success && res.data) {
-      set({ messages: res.data.messages || [] });
+      set({ 
+        messages: res.data.messages || [],
+        currentModel: res.data.model || null
+      });
     }
   },
   sendMessage: async (sessionId: string, text: string, model?: string) => {
@@ -57,7 +62,8 @@ export const useChatMessages = create<ChatMessagesState>((set, get) => ({
             messages: fullRes.data.messages,
             isProcessing: false,
             streamingMessage: null,
-            abortController: null
+            abortController: null,
+            currentModel: fullRes.data.model || model || null
           });
         }
       }

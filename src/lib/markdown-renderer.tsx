@@ -14,14 +14,12 @@ mermaid.initialize({
   fontFamily: 'Inter, sans-serif',
   flowchart: { useMaxWidth: true, htmlLabels: true },
 });
-// Simple render cache to prevent re-renders of stable diagrams
 const mermaidCache = new Map<string, string>();
 const Mermaid = memo(({ chart }: { chart: string }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>(mermaidCache.get(chart) || '');
   const renderTimeout = useRef<NodeJS.Timeout>();
   useEffect(() => {
-    // Debounce rendering during streaming to save CPU
     clearTimeout(renderTimeout.current);
     if (mermaidCache.has(chart)) {
       setSvg(mermaidCache.get(chart)!);
@@ -35,11 +33,10 @@ const Mermaid = memo(({ chart }: { chart: string }) => {
           mermaidCache.set(chart, renderedSvg);
           setSvg(renderedSvg);
         } catch (error) {
-          console.warn('Mermaid render failed (likely partial syntax during stream)');
-          // Don't show error while it might be typing, wait for final
+          // Suppress errors during stream parsing as diagrams are often incomplete
         }
       }
-    }, 400); // 400ms debounce
+    }, 450); 
     return () => clearTimeout(renderTimeout.current);
   }, [chart]);
   return (

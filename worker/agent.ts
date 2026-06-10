@@ -37,7 +37,6 @@ export class ChatAgent extends Agent<Env, ChatState> {
     }
   }
   private handleGetMessages(): Response {
-    // Merge state with initial state for safe defaults
     const safeState = {
       ...this.initialState,
       ...this.state,
@@ -71,7 +70,8 @@ export class ChatAgent extends Agent<Env, ChatState> {
               message,
               this.state.messages,
               (chunk: string) => {
-                this.setState({ ...this.state, streamingMessage: (this.state.streamingMessage || '') + chunk });
+                const currentStreaming = this.state.streamingMessage || '';
+                this.setState({ ...this.state, streamingMessage: currentStreaming + chunk });
                 writer.write(encoder.encode(chunk)).catch(e => console.error('Stream write error', e));
               }
             );
@@ -85,9 +85,18 @@ export class ChatAgent extends Agent<Env, ChatState> {
           } catch (error) {
             console.error('[STREAM ERROR]', error);
             const errorMsg = createMessage('assistant', 'I encountered an error processing your request.');
-            this.setState({ ...this.state, messages: [...this.state.messages, errorMsg], isProcessing: false, streamingMessage: '' });
+            this.setState({ 
+              ...this.state, 
+              messages: [...this.state.messages, errorMsg], 
+              isProcessing: false, 
+              streamingMessage: '' 
+            });
           } finally {
-            try { writer.close(); } catch (e) {}
+            try { 
+              await writer.close(); 
+            } catch (e) {
+              console.warn('Writer closure failed', e);
+            }
           }
         })();
         return createStreamResponse(readable);

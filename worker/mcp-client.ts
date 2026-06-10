@@ -4,6 +4,14 @@ interface MCPServerConfig {
   name: string;
   sseUrl: string;
 }
+interface MCPToolDefinition {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: any;
+  };
+}
 const MCP_SERVERS: MCPServerConfig[] = [];
 export class MCPManager {
   private clients: Map<string, Client> = new Map();
@@ -15,7 +23,6 @@ export class MCPManager {
       try {
         const transport = new SSEClientTransport(new URL(serverConfig.sseUrl));
         const client = new Client({ name: 'illustra-agent', version: '1.0.0' }, { capabilities: {} });
-        // Timeout protection for connection
         await Promise.race([
           client.connect(transport),
           new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
@@ -30,9 +37,9 @@ export class MCPManager {
     await Promise.allSettled(connectionPromises);
     this.initialized = true;
   }
-  async getToolDefinitions() {
+  async getToolDefinitions(): Promise<MCPToolDefinition[]> {
     await this.initialize();
-    const allTools = [];
+    const allTools: MCPToolDefinition[] = [];
     for (const [serverName, client] of this.clients.entries()) {
       try {
         const toolsResult = await client.listTools();
@@ -46,7 +53,9 @@ export class MCPManager {
             }
           });
         });
-      } catch (e) { console.error(`[MCP] Tool fetch error for ${serverName}`, e); }
+      } catch (e) { 
+        console.error(`[MCP] Tool fetch error for ${serverName}`, e); 
+      }
     }
     return allTools;
   }
@@ -58,8 +67,12 @@ export class MCPManager {
     try {
       const result = await client.callTool({ name: toolName, arguments: args });
       if (result.isError) throw new Error('Tool error');
-      return Array.isArray(result.content) ? result.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n') : 'No response';
-    } catch (e) { throw new Error(`Execution failed: ${e}`); }
+      return Array.isArray(result.content) 
+        ? result.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n') 
+        : 'No response';
+    } catch (e) { 
+      throw new Error(`Execution failed: ${e}`); 
+    }
   }
 }
 export const mcpManager = new MCPManager();
