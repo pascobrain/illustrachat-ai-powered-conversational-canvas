@@ -78,9 +78,6 @@ export const useChatMessages = create<ChatMessagesState>((set, get) => ({
     }
   },
   deleteMessage: async (sessionId, messageId) => {
-    // Note: Since the agent state is persistent, we filter locally for UI 
-    // and usually we'd need an endpoint for specific message deletion.
-    // For now, we perform local filtering and a warning.
     set(state => ({
       messages: state.messages.filter(m => m.id !== messageId)
     }));

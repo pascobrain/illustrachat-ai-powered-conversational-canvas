@@ -1,13 +1,11 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { useChatMessages } from '@/hooks/use-chat-messages';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
-import { 
-  Loader2, Download, FileText, ImageIcon, Pencil, Check, X, 
-  ChevronDown, Settings2, Trash, ArrowDown, Sparkles, Layout, Zap 
+import {
+  Check, X, ChevronDown, Settings2, Trash, ArrowDown, Sparkles, Layout, Zap, Pencil, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,7 +17,7 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { exportToText, exportToImage } from '@/lib/export-utils';
+import { exportToText } from '@/lib/export-utils';
 import { MODELS } from '@/lib/chat';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -27,21 +25,20 @@ interface ChatMainProps {
   activeSessionId: string;
 }
 export function ChatMain({ activeSessionId }: ChatMainProps) {
-  const messages = useChatMessages(useShallow(s => s.messages));
+  // STRICT ZUSTAND SELECTORS - MULTIPLE PRIMITIVE CALLS
+  const messages = useChatMessages(s => s.messages);
   const isProcessing = useChatMessages(s => s.isProcessing);
   const streamingMessage = useChatMessages(s => s.streamingMessage);
   const loadMessages = useChatMessages(s => s.loadMessages);
   const clearCurrentSession = useChatMessages(s => s.clearCurrentSession);
-  const sessions = useChatSessions(useShallow(s => s.sessions));
+  const sessions = useChatSessions(s => s.sessions);
   const renameSession = useChatSessions(s => s.renameSession);
   const activeSession = useMemo(() => sessions.find(s => s.id === activeSessionId), [sessions, activeSessionId]);
   const [selectedModel, setSelectedModel] = useState(MODELS[0].id);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState('');
-  const [isExporting, setIsExporting] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const viewportRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     loadMessages(activeSessionId);
     setIsEditingTitle(false);
@@ -107,8 +104,8 @@ export function ChatMain({ activeSessionId }: ChatMainProps) {
             <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1.5 shadow-xl">
               <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-2 py-2">AI Model</DropdownMenuLabel>
               {MODELS.map(m => (
-                <DropdownMenuItem 
-                  key={m.id} 
+                <DropdownMenuItem
+                  key={m.id}
                   onClick={() => setSelectedModel(m.id)}
                   className="rounded-xl flex items-center justify-between py-2 cursor-pointer"
                 >
@@ -184,14 +181,14 @@ export function ChatMain({ activeSessionId }: ChatMainProps) {
       </ScrollArea>
       <AnimatePresence>
         {showScrollBottom && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 10 }}
             className="absolute bottom-32 left-1/2 -translate-x-1/2 z-30"
           >
-            <Button 
-              size="icon" 
+            <Button
+              size="icon"
               className="rounded-full bg-background border border-border shadow-lg hover:bg-accent text-foreground w-10 h-10"
               onClick={() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' })}
             >
