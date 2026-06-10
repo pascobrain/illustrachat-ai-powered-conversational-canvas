@@ -10,6 +10,7 @@ export class ChatHandler {
       console.warn('AI Gateway URL or API Key missing. Check worker environment variables.');
     }
     // Clean URL to prevent SDK parsing errors (e.g., directOverride issues from malformed base URLs)
+    // Correctly match and remove one or more trailing forward slashes
     const baseURL = aiGatewayUrl?.trim().replace(/\/+$/, '');
     this.client = new OpenAI({
       baseURL,
