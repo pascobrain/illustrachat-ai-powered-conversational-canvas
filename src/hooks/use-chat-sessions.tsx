@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { chatService } from '@/lib/chat';
-import type { SessionInfo } from '@/worker/types';
+import type { SessionInfo } from '@shared/types';
 import { toast } from 'sonner';
 interface ChatSessionsState {
   sessions: SessionInfo[];
@@ -28,7 +28,7 @@ export const useChatSessions = create<ChatSessionsState>((set, get) => ({
   createNewSession: async (firstMsg) => {
     const res = await chatService.createSession(undefined, undefined, firstMsg);
     if (res.success && res.data) {
-      const newSession = {
+      const newSession: SessionInfo = {
         id: res.data.sessionId,
         title: res.data.title,
         createdAt: Date.now(),
@@ -48,8 +48,8 @@ export const useChatSessions = create<ChatSessionsState>((set, get) => ({
     if (res.success) {
       set(state => {
         const nextSessions = state.sessions.filter(s => s.id !== id);
-        const nextActive = state.activeSessionId === id 
-          ? (nextSessions[0]?.id || null) 
+        const nextActive = state.activeSessionId === id
+          ? (nextSessions[0]?.id || null)
           : state.activeSessionId;
         return { sessions: nextSessions, activeSessionId: nextActive };
       });

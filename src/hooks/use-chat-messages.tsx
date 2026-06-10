@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { chatService } from '@/lib/chat';
-import { Message } from '@/worker/types';
-import { useChatSessions } from './use-chat-sessions';
+import type { Message } from '@shared/types';
 interface ChatMessagesState {
   messages: Message[];
   isProcessing: boolean;
@@ -10,7 +9,7 @@ interface ChatMessagesState {
   sendMessage: (sessionId: string, text: string) => Promise<void>;
   clearMessages: (sessionId: string) => Promise<void>;
 }
-export const useChatMessages = create<ChatMessagesState>((set, get) => ({
+export const useChatMessages = create<ChatMessagesState>((set) => ({
   messages: [],
   isProcessing: false,
   streamingMessage: null,
@@ -44,7 +43,6 @@ export const useChatMessages = create<ChatMessagesState>((set, get) => ({
         }
       );
       if (res.success) {
-        // Refresh full history to get tool results and final msg
         const fullRes = await chatService.getMessages(sessionId);
         if (fullRes.success && fullRes.data) {
           set({ 
@@ -55,6 +53,7 @@ export const useChatMessages = create<ChatMessagesState>((set, get) => ({
         }
       }
     } catch (e) {
+      console.error('Failed to send message:', e);
       set({ isProcessing: false, streamingMessage: null });
     }
   },
