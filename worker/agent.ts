@@ -10,7 +10,7 @@ export class ChatAgent extends Agent<Env, ChatState> {
     messages: [],
     sessionId: '',
     isProcessing: false,
-    model: 'google-ai-studio/gemini-2.0-flash'
+    model: 'google-ai-studio/gemini-3.1-flash-lite'
   };
   async onStart(): Promise<void> {
     this.chatHandler = new ChatHandler(
@@ -85,15 +85,15 @@ export class ChatAgent extends Agent<Env, ChatState> {
           } catch (error) {
             console.error('[STREAM ERROR]', error);
             const errorMsg = createMessage('assistant', 'I encountered an error processing your request.');
-            this.setState({ 
-              ...this.state, 
-              messages: [...this.state.messages, errorMsg], 
-              isProcessing: false, 
-              streamingMessage: '' 
+            this.setState({
+              ...this.state,
+              messages: [...this.state.messages, errorMsg],
+              isProcessing: false,
+              streamingMessage: ''
             });
           } finally {
-            try { 
-              await writer.close(); 
+            try {
+              await writer.close();
             } catch (e) {
               console.warn('Writer closure failed', e);
             }

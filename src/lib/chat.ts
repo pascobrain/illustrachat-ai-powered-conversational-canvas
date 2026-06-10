@@ -5,8 +5,9 @@ export interface ChatResponse {
   error?: string;
 }
 export const MODELS = [
+  { id: 'google-ai-studio/gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
+  { id: 'google/gemma-4-31b-it', name: 'Gemma 4 31B IT' },
   { id: 'google-ai-studio/gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-  { id: 'google-ai-studio/gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
   { id: 'openai/gpt-4o', name: 'GPT-4o' },
   { id: 'anthropic/claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' }
 ];

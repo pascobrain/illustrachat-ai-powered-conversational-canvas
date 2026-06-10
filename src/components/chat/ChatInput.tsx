@@ -45,7 +45,7 @@ export function ChatInput({ activeSessionId, model }: ChatInputProps) {
             value={input}
             onChange={handleTextareaChange}
             onKeyDown={onKeyDown}
-            placeholder="Type a message or describe a diagram..."
+            placeholder={model?.includes('gemini-3.1') ? "Ask Gemini 3.1 to create logic or diagrams..." : "Type a message..."}
             className="flex-1 min-h-[48px] max-h-[200px] resize-none border-none focus-visible:ring-0 shadow-none bg-transparent py-3 px-4 font-medium text-sm scrollbar-hide"
             disabled={isProcessing}
           />
@@ -87,15 +87,17 @@ export function ChatInput({ activeSessionId, model }: ChatInputProps) {
           </div>
         </div>
         <div className="px-4 pb-1 flex items-center justify-between">
-           <div className="flex items-center gap-1.5 opacity-40 hover:opacity-100 transition-opacity cursor-default">
-              <Zap className="w-3 h-3 text-turquoise" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Mermaid Ready</span>
+           <div className="flex items-center gap-1.5 opacity-40 hover:opacity-100 transition-opacity cursor-default group/engine">
+              <Zap className="w-3 h-3 text-turquoise group-hover/engine:animate-pulse" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">
+                {model?.split('/').pop()?.toUpperCase() || 'GEMINI 3.1'} Optimized
+              </span>
            </div>
            <span className={cn(
              "text-[9px] font-bold tracking-tighter opacity-20",
-             input.length > 3500 && "opacity-80 text-coral-red"
+             input.length > 7000 && "opacity-80 text-coral-red"
            )}>
-             {input.length} / 4000
+             {input.length} / 8000
            </span>
         </div>
       </div>

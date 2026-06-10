@@ -1,5 +1,5 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse';
 interface MCPServerConfig {
   name: string;
   sseUrl: string;
@@ -53,8 +53,8 @@ export class MCPManager {
             }
           });
         });
-      } catch (e) { 
-        console.error(`[MCP] Tool fetch error for ${serverName}`, e); 
+      } catch (e) {
+        console.error(`[MCP] Tool fetch error for ${serverName}`, e);
       }
     }
     return allTools;
@@ -67,11 +67,11 @@ export class MCPManager {
     try {
       const result = await client.callTool({ name: toolName, arguments: args });
       if (result.isError) throw new Error('Tool error');
-      return Array.isArray(result.content) 
-        ? result.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n') 
+      return Array.isArray(result.content)
+        ? result.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n')
         : 'No response';
-    } catch (e) { 
-      throw new Error(`Execution failed: ${e}`); 
+    } catch (e) {
+      throw new Error(`Execution failed: ${e}`);
     }
   }
 }

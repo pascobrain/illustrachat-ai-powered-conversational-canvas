@@ -4,7 +4,7 @@ import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { useChatMessages } from '@/hooks/use-chat-messages';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
-import { Check, ChevronDown, Settings2, Trash, ArrowDown, Sparkles, Pencil, FileText } from 'lucide-react';
+import { Check, ChevronDown, Settings2, Trash, ArrowDown, Sparkles, Pencil, FileText, Badge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -62,15 +62,15 @@ export function ChatMain({ activeSessionId }: { activeSessionId: string }) {
         <div className="flex-1 min-w-0 mr-4">
           {isEditingTitle ? (
             <div className="flex items-center gap-2 max-w-md">
-              <Input 
-                value={editTitle} 
-                onChange={(e) => setEditTitle(e.target.value)} 
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleRename();
                   if (e.key === 'Escape') setIsEditingTitle(false);
-                }} 
-                autoFocus 
-                className="h-9 py-1 rounded-xl" 
+                }}
+                autoFocus
+                className="h-9 py-1 rounded-xl"
               />
               <Button size="icon" variant="ghost" className="h-9 w-9 text-turquoise" onClick={handleRename}>
                 <Check className="w-5 h-5" />
@@ -90,12 +90,20 @@ export function ChatMain({ activeSessionId }: { activeSessionId: string }) {
                 <Settings2 className="w-4 h-4" /> <span className="hidden sm:inline">Settings</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded-2xl">
-              <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground p-2">AI Model</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-64 rounded-2xl">
+              <DropdownMenuLabel className="text-[10px] uppercase font-bold text-muted-foreground p-2">AI Engine</DropdownMenuLabel>
               {MODELS.map(m => (
-                <DropdownMenuItem key={m.id} onClick={() => setSelectedModel(m.id)} className="rounded-xl flex justify-between py-2 cursor-pointer">
-                  <span className={selectedModel === m.id ? "font-bold text-turquoise" : ""}>{m.name}</span>
-                  {selectedModel === m.id && <Check className="w-4 h-4 text-turquoise" />}
+                <DropdownMenuItem key={m.id} onClick={() => setSelectedModel(m.id)} className="rounded-xl flex justify-between items-center py-2.5 cursor-pointer">
+                  <div className="flex flex-col gap-0.5">
+                    <span className={cn("text-sm", selectedModel === m.id ? "font-bold text-turquoise" : "font-medium")}>
+                      {m.name}
+                    </span>
+                    {m.id.includes('gemini-3.1') && <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Default</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {m.id.includes('gemma-4') && <span className="bg-coral-red/10 text-coral-red text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">New</span>}
+                    {selectedModel === m.id && <Check className="w-4 h-4 text-turquoise" />}
+                  </div>
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
@@ -117,6 +125,7 @@ export function ChatMain({ activeSessionId }: { activeSessionId: string }) {
                 <Sparkles className="w-10 h-10 text-turquoise" />
               </div>
               <h4 className="text-2xl font-display font-bold">New Canvas Awaits</h4>
+              <p className="text-muted-foreground text-sm max-w-xs">Powered by Gemini 3.1 Flash Lite. Describe a concept or ask for a diagram.</p>
             </div>
           ) : messages.map((msg) => <ChatMessage key={msg.id} message={msg} />)}
           {streamingMessage && (
