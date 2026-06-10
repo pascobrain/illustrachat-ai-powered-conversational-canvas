@@ -6,17 +6,21 @@ export class ChatHandler {
   private client: OpenAI;
   private model: string;
   constructor(aiGatewayUrl: string, apiKey: string, model: string) {
-    if (!aiGatewayUrl || !apiKey) {
-      console.warn('AI Gateway URL or API Key missing. Check worker environment variables.');
-    }
-    // Clean URL to prevent SDK parsing errors (e.g., directOverride issues from malformed base URLs)
-    // Correctly match and remove one or more trailing forward slashes
-    const baseURL = aiGatewayUrl?.trim().replace(/\/+$/, '');
+    // Robust URL cleaning to prevent the 'directOverride' crash
+    // The OpenAI SDK crashes if baseURL is invalid or has specific trailing patterns in certain environments
+    const cleanedURL = (aiGatewayUrl || '').trim().replace(/\/+$/, '');
+    // Fallback to a safe string if empty to prevent internal SDK undefined access
+    const finalBaseURL = cleanedURL || 'https://gateway.ai.cloudflare.com/v1/invalid/placeholder/openai';
     this.client = new OpenAI({
-      baseURL,
+      baseURL: finalBaseURL,
       apiKey: apiKey || 'missing-key',
+      // Explicitly provide fetch to avoid environment detection issues in DO/Workers
+      fetch: (...args) => fetch(...args),
+      // Prevent the SDK from trying to use browser-specific logic that might trigger directOverride
+      dangerouslyAllowBrowser: true,
       defaultHeaders: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Project': 'IllustraChat-v1.2'
       }
     });
     this.model = model;
@@ -36,9 +40,8 @@ export class ChatHandler {
         const stream = await this.client.chat.completions.create({
           model: this.model,
           messages,
-          tools: toolDefinitions,
-          tool_choice: 'auto',
-          max_completion_tokens: 16000,
+          tools: toolDefinitions.length > 0 ? toolDefinitions : undefined,
+          tool_choice: toolDefinitions.length > 0 ? 'auto' : undefined,
           stream: true,
         });
         return this.handleStreamResponse(stream, message, conversationHistory, onChunk);
@@ -46,14 +49,17 @@ export class ChatHandler {
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages,
-        tools: toolDefinitions,
-        tool_choice: 'auto',
-        max_tokens: 16000,
+        tools: toolDefinitions.length > 0 ? toolDefinitions : undefined,
+        tool_choice: toolDefinitions.length > 0 ? 'auto' : undefined,
         stream: false
       });
       return this.handleNonStreamResponse(completion, message, conversationHistory);
-    } catch (error) {
-      console.error('OpenAI API Request Error:', error);
+    } catch (error: any) {
+      console.error('OpenAI Request Error:', error);
+      // provide more context for debugging the 'directOverride' or 500 errors
+      if (error?.message?.includes('directOverride') || error?.status === 500) {
+        throw new Error(`AI_GATEWAY_CONFIGURATION_ERROR: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -65,39 +71,27 @@ export class ChatHandler {
   ) {
     let fullContent = '';
     const accumulatedToolCalls: ChatCompletionMessageFunctionToolCall[] = [];
-    try {
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta;
-        if (delta?.content) {
-          fullContent += delta.content;
-          onChunk(delta.content);
-        }
-        if (delta?.tool_calls) {
-          for (let i = 0; i < delta.tool_calls.length; i++) {
-            const deltaToolCall = delta.tool_calls[i];
-            if (!accumulatedToolCalls[i]) {
-              accumulatedToolCalls[i] = {
-                id: deltaToolCall.id || `tool_${Date.now()}_${i}`,
-                type: 'function',
-                function: {
-                  name: deltaToolCall.function?.name || '',
-                  arguments: deltaToolCall.function?.arguments || ''
-                }
-              };
-            } else {
-              if (deltaToolCall.function?.name && !accumulatedToolCalls[i].function.name) {
-                accumulatedToolCalls[i].function.name = deltaToolCall.function.name;
-              }
-              if (deltaToolCall.function?.arguments) {
-                accumulatedToolCalls[i].function.arguments += deltaToolCall.function.arguments;
-              }
-            }
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta;
+      if (delta?.content) {
+        fullContent += delta.content;
+        onChunk(delta.content);
+      }
+      if (delta?.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const i = tc.index;
+          if (!accumulatedToolCalls[i]) {
+            accumulatedToolCalls[i] = {
+              id: tc.id || `tool_${Date.now()}_${i}`,
+              type: 'function',
+              function: { name: tc.function?.name || '', arguments: tc.function?.arguments || '' }
+            };
+          } else {
+            if (tc.function?.name) accumulatedToolCalls[i].function.name += tc.function.name;
+            if (tc.function?.arguments) accumulatedToolCalls[i].function.arguments += tc.function.arguments;
           }
         }
       }
-    } catch (error) {
-      console.error('Stream processing error:', error);
-      throw new Error('Stream processing failed');
     }
     if (accumulatedToolCalls.length > 0) {
       const executedTools = await this.executeToolCalls(accumulatedToolCalls);
@@ -112,84 +106,40 @@ export class ChatHandler {
     conversationHistory: Message[]
   ) {
     const responseMessage = completion.choices[0]?.message;
-    if (!responseMessage) {
-      return { content: 'I apologize, but I encountered an issue processing your request.' };
-    }
-    if (!responseMessage.tool_calls) {
-      return {
-        content: responseMessage.content || 'I apologize, but I encountered an issue.'
-      };
-    }
+    if (!responseMessage) return { content: 'No response from AI.' };
+    if (!responseMessage.tool_calls) return { content: responseMessage.content || '' };
     const toolCalls = await this.executeToolCalls(responseMessage.tool_calls as ChatCompletionMessageFunctionToolCall[]);
-    const finalResponse = await this.generateToolResponse(
-      message,
-      conversationHistory,
-      responseMessage.tool_calls as any,
-      toolCalls
-    );
+    const finalResponse = await this.generateToolResponse(message, conversationHistory, responseMessage.tool_calls as any, toolCalls);
     return { content: finalResponse, toolCalls };
   }
   private async executeToolCalls(openAiToolCalls: ChatCompletionMessageFunctionToolCall[]): Promise<ToolCall[]> {
-    return Promise.all(
-      openAiToolCalls.map(async (tc) => {
-        try {
-          const args = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
-          const result = await executeTool(tc.function.name, args);
-          return {
-            id: tc.id,
-            name: tc.function.name,
-            arguments: args,
-            result
-          };
-        } catch (error) {
-          console.error(`Tool execution failed for ${tc.function.name}:`, error);
-          return {
-            id: tc.id,
-            name: tc.function.name,
-            arguments: {},
-            result: { error: `Failed to execute ${tc.function.name}: ${error instanceof Error ? error.message : 'Unknown error'}` }
-          };
-        }
-      })
-    );
+    return Promise.all(openAiToolCalls.map(async (tc) => {
+      try {
+        const args = JSON.parse(tc.function.arguments || '{}');
+        const result = await executeTool(tc.function.name, args);
+        return { id: tc.id, name: tc.function.name, arguments: args, result };
+      } catch (error) {
+        return { id: tc.id, name: tc.function.name, arguments: {}, result: { error: 'Tool execution failed' } };
+      }
+    }));
   }
-  private async generateToolResponse(
-    userMessage: string,
-    history: Message[],
-    openAiToolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[],
-    toolResults: ToolCall[]
-  ): Promise<string> {
-    const followUpCompletion = await this.client.chat.completions.create({
+  private async generateToolResponse(userMsg: string, history: Message[], calls: any[], results: ToolCall[]): Promise<string> {
+    const followUp = await this.client.chat.completions.create({
       model: this.model,
       messages: [
-        { role: 'system', content: 'You are a helpful AI assistant. Respond naturally to the tool results.' },
+        { role: 'system', content: 'Respond naturally to tool results.' },
         ...history.slice(-3).map(m => ({ role: m.role as any, content: m.content })),
-        { role: 'user', content: userMessage },
-        {
-          role: 'assistant',
-          content: null,
-          tool_calls: openAiToolCalls
-        },
-        ...toolResults.map((result, index) => ({
-          role: 'tool' as const,
-          content: JSON.stringify(result.result),
-          tool_call_id: openAiToolCalls[index]?.id || result.id
-        }))
-      ],
-      max_tokens: 16000
+        { role: 'user', content: userMsg },
+        { role: 'assistant', content: null, tool_calls: calls },
+        ...results.map((r, i) => ({ role: 'tool' as const, content: JSON.stringify(r.result), tool_call_id: calls[i]?.id || r.id }))
+      ]
     });
-    return followUpCompletion.choices[0]?.message?.content || 'Tool results processed successfully.';
+    return followUp.choices[0]?.message?.content || 'Processed tool results.';
   }
   private buildConversationMessages(userMessage: string, history: Message[]) {
     return [
-      {
-        role: 'system' as const,
-        content: 'You are a helpful AI assistant that helps users build and deploy web applications. You provide clear, concise guidance on development, deployment, and troubleshooting. Keep responses practical and actionable.'
-      },
-      ...history.slice(-5).map(m => ({
-        role: m.role as any,
-        content: m.content
-      })),
+      { role: 'system' as const, content: 'You are IllustraChat AI, a creative conversational assistant.' },
+      ...history.slice(-10).map(m => ({ role: m.role as any, content: m.content })),
       { role: 'user' as const, content: userMessage }
     ];
   }
