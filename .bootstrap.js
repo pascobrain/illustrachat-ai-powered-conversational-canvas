@@ -83,7 +83,8 @@ function runSetupCommands() {
     "bun add rehype-highlight@^7.0.0",
     "bun add mermaid@^10.9.0",
     "bun add html2canvas@^1.4.1",
-    "bun add file-saver@^2.0.5"
+    "bun add file-saver@^2.0.5",
+    "bun add lucide-react @modelcontextprotocol/sdk"
 ];
     
     if (commands.length === 0) {
