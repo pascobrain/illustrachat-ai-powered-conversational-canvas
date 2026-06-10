@@ -11,20 +11,18 @@ export const MODELS = [
   { id: 'anthropic/claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' }
 ];
 class ChatService {
-  async sendMessage(
-    sessionId: string,
-    message: string,
-    model?: string,
-    onChunk?: (chunk: string) => void
-  ): Promise<ChatResponse> {
+  async sendMessage(sessionId: string, message: string, model?: string, onChunk?: (chunk: string) => void): Promise<ChatResponse> {
     try {
-      const url = `/api/chat/${sessionId}/chat`;
-      const response = await fetch(url, {
+      const response = await fetch(`/api/chat/${sessionId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, model, stream: !!onChunk }),
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`[API ERROR] sendMessage failed (${response.status}):`, errText);
+        return { success: false, error: `Server error: ${response.status}` };
+      }
       if (onChunk && response.body) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -42,90 +40,78 @@ class ChatService {
       }
       return await response.json();
     } catch (error) {
-      console.error('Failed to send message:', error);
-      return { success: false, error: 'Failed to send message' };
+      console.error('[NETWORK ERROR] sendMessage:', error);
+      return { success: false, error: 'Network failure' };
     }
   }
   async getMessages(sessionId: string): Promise<ChatResponse> {
     try {
       const response = await fetch(`/api/chat/${sessionId}/messages`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: response.statusText }));
+        console.error('[API ERROR] getMessages:', err);
+        return { success: false, error: err.error || 'Failed to load' };
+      }
       return await response.json();
     } catch (error) {
-      console.error('Failed to get messages:', error);
-      return { success: false, error: 'Failed to load messages' };
+      console.error('[NETWORK ERROR] getMessages:', error);
+      return { success: false, error: 'Network failure' };
     }
   }
   async clearMessages(sessionId: string): Promise<ChatResponse> {
     try {
-      const response = await fetch(`/api/chat/${sessionId}/clear`, { method: 'DELETE' });
-      return await response.json();
-    } catch (error) {
-      return { success: false, error: 'Failed to clear messages' };
-    }
+      const res = await fetch(`/api/chat/${sessionId}/clear`, { method: 'DELETE' });
+      return await res.json();
+    } catch (e) { return { success: false }; }
   }
   async updateSessionModel(sessionId: string, model: string): Promise<ChatResponse> {
     try {
-      const response = await fetch(`/api/chat/${sessionId}/model`, {
+      const res = await fetch(`/api/chat/${sessionId}/model`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model })
       });
-      return await response.json();
-    } catch (error) {
-      return { success: false, error: 'Failed to update model' };
-    }
+      return await res.json();
+    } catch (e) { return { success: false }; }
   }
-  async createSession(title?: string, sessionId?: string, firstMessage?: string): Promise<{ success: boolean; data?: { sessionId: string; title: string }; error?: string }> {
+  async createSession(title?: string, sessionId?: string, firstMessage?: string) {
     try {
-      const response = await fetch('/api/sessions', {
+      const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, sessionId, firstMessage })
       });
-      return await response.json();
-    } catch (error) {
-      return { success: false, error: 'Failed to create session' };
-    }
+      return await res.json();
+    } catch (e) { return { success: false }; }
   }
-  async listSessions(): Promise<{ success: boolean; data?: SessionInfo[]; error?: string }> {
+  async listSessions() {
     try {
-      const response = await fetch('/api/sessions');
-      return await response.json();
-    } catch (error) {
-      return { success: false, error: 'Failed to list sessions' };
-    }
+      const res = await fetch('/api/sessions');
+      return await res.json();
+    } catch (e) { return { success: false }; }
   }
-  async deleteSession(sessionId: string): Promise<{ success: boolean; error?: string }> {
+  async deleteSession(sessionId: string) {
     try {
-      const response = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
-      return await response.json();
-    } catch (error) {
-      return { success: false, error: 'Failed to delete session' };
-    }
+      const res = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+      return await res.json();
+    } catch (e) { return { success: false }; }
   }
-  async updateSessionTitle(sessionId: string, title: string): Promise<{ success: boolean; error?: string }> {
+  async updateSessionTitle(sessionId: string, title: string) {
     try {
-      const response = await fetch(`/api/sessions/${sessionId}/title`, {
+      const res = await fetch(`/api/sessions/${sessionId}/title`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title })
       });
-      return await response.json();
-    } catch (error) {
-      return { success: false, error: 'Failed to update session title' };
-    }
+      return await res.json();
+    } catch (e) { return { success: false }; }
   }
-  async clearAllSessions(): Promise<{ success: boolean; data?: { deletedCount: number }; error?: string }> {
+  async clearAllSessions() {
     try {
-      const response = await fetch('/api/sessions', { method: 'DELETE' });
-      return await response.json();
-    } catch (error) {
-      return { success: false, error: 'Failed to clear all sessions' };
-    }
+      const res = await fetch('/api/sessions', { method: 'DELETE' });
+      return await res.json();
+    } catch (e) { return { success: false }; }
   }
 }
 export const chatService = new ChatService();
-export const formatTime = (timestamp: number): string => {
-  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
+export const formatTime = (ts: number) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
