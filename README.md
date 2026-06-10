@@ -1,6 +1,6 @@
 # Illustrachat
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/pascobrain/illustrachat-ai-powered-conversational-canvas)
 
 A powerful AI chat application built with Cloudflare Workers, Durable Objects, and React. Features real-time streaming responses, tool integrations, session management, and MCP support.
 
@@ -90,7 +90,7 @@ bun run build
 
 ## Deployment
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/pascobrain/illustrachat-ai-powered-conversational-canvas)
 
 ### Deploy to Cloudflare
 
