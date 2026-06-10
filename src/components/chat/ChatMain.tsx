@@ -4,12 +4,13 @@ import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { useChatMessages } from '@/hooks/use-chat-messages';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
-import { Check, ChevronDown, Settings2, Trash, ArrowDown, Sparkles, Pencil, FileText, Badge } from 'lucide-react';
+import { Check, ChevronDown, Settings2, Trash, ArrowDown, Sparkles, Pencil, FileText, Badge, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { exportToText } from '@/lib/export-utils';
+import { exportToText, exportToImage } from '@/lib/export-utils';
 import { MODELS, chatService } from '@/lib/chat';
+import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 export function ChatMain({ activeSessionId }: { activeSessionId: string }) {
   const messages = useChatMessages(s => s.messages);
@@ -55,6 +56,13 @@ export function ChatMain({ activeSessionId }: { activeSessionId: string }) {
       renameSession(activeSessionId, editTitle.trim());
     }
     setIsEditingTitle(false);
+  };
+  const handleExportImage = async () => {
+    try {
+      await exportToImage("chat-capture-area", activeSession?.title || "Chat");
+    } catch (error) {
+      console.error("Export failed", error);
+    }
   };
   return (
     <div className="flex flex-col h-full bg-card/60 backdrop-blur-sm rounded-3xl border border-border shadow-soft overflow-hidden relative">
@@ -108,8 +116,12 @@ export function ChatMain({ activeSessionId }: { activeSessionId: string }) {
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => exportToText(messages, activeSession?.title || 'Chat')} className="gap-2 rounded-xl cursor-pointer">
-                <FileText className="w-4 h-4" /> Export MD
+                <FileText className="w-4 h-4" /> Export Markdown
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportImage} className="gap-2 rounded-xl cursor-pointer">
+                <ImageIcon className="w-4 h-4" /> Export PNG Image
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => clearCurrentSession(activeSessionId)} className="gap-2 rounded-xl cursor-pointer text-destructive">
                 <Trash className="w-4 h-4" /> Clear History
               </DropdownMenuItem>
@@ -118,7 +130,7 @@ export function ChatMain({ activeSessionId }: { activeSessionId: string }) {
         </div>
       </div>
       <ScrollArea className="flex-1 p-4 md:p-8" onScrollCapture={handleScroll}>
-        <div className="space-y-8 max-w-4xl mx-auto pb-12">
+        <div id="chat-capture-area" className="space-y-8 max-w-4xl mx-auto pb-12">
           {messages.length === 0 && !isProcessing ? (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
               <div className="w-20 h-20 rounded-full bg-accent flex items-center justify-center animate-float">

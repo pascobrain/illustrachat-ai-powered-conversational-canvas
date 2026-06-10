@@ -23,7 +23,7 @@ export const useChatMessages = create<ChatMessagesState>((set, get) => ({
   loadMessages: async (sessionId: string) => {
     const res = await chatService.getMessages(sessionId);
     if (res.success && res.data) {
-      set({ 
+      set({
         messages: res.data.messages || [],
         currentModel: res.data.model || null
       });
@@ -84,10 +84,24 @@ export const useChatMessages = create<ChatMessagesState>((set, get) => ({
     }
   },
   deleteMessage: async (sessionId, messageId) => {
+    const previousMessages = get().messages;
+    // Optimistic UI update
     set(state => ({
       messages: state.messages.filter(m => m.id !== messageId)
     }));
-    toast.success("Message removed from view");
+    try {
+      const res = await chatService.deleteMessage(sessionId, messageId);
+      if (res.success) {
+        toast.success("Message deleted persistently");
+      } else {
+        throw new Error("Backend delete failed");
+      }
+    } catch (error) {
+      console.error("Failed to delete message on backend", error);
+      // Revert if failed
+      set({ messages: previousMessages });
+      toast.error("Failed to delete message persistently");
+    }
   },
   clearCurrentSession: async (sessionId: string) => {
     const res = await chatService.clearMessages(sessionId);

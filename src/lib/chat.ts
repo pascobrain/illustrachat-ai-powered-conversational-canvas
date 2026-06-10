@@ -65,6 +65,15 @@ class ChatService {
       return await res.json();
     } catch (e) { return { success: false }; }
   }
+  async deleteMessage(sessionId: string, messageId: string): Promise<ChatResponse> {
+    try {
+      const res = await fetch(`/api/chat/${sessionId}/message/${messageId}`, { method: 'DELETE' });
+      return await res.json();
+    } catch (e) {
+      console.error('[NETWORK ERROR] deleteMessage:', e);
+      return { success: false };
+    }
+  }
   async updateSessionModel(sessionId: string, model: string): Promise<ChatResponse> {
     try {
       const res = await fetch(`/api/chat/${sessionId}/model`, {

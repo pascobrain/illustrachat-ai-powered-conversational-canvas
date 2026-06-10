@@ -30,6 +30,11 @@ export class ChatAgent extends Agent<Env, ChatState> {
       if (method === 'POST' && url.pathname === '/chat') return this.handleChatMessage(await request.json());
       if (method === 'DELETE' && url.pathname === '/clear') return this.handleClearMessages();
       if (method === 'POST' && url.pathname === '/model') return this.handleModelUpdate(await request.json());
+      // PERSISTENT MESSAGE DELETION
+      const deleteMsgMatch = url.pathname.match(/^\/message\/([^/]+)$/);
+      if (method === 'DELETE' && deleteMsgMatch) {
+        return this.handleDeleteMessage(deleteMsgMatch[1]);
+      }
       return Response.json({ success: false, error: API_RESPONSES.NOT_FOUND }, { status: 404 });
     } catch (error) {
       console.error('[AGENT REQUEST ERROR]', error);
@@ -119,5 +124,10 @@ export class ChatAgent extends Agent<Env, ChatState> {
     this.setState({ ...this.state, model: body.model });
     this.chatHandler?.updateModel(body.model);
     return Response.json({ success: true, data: this.state });
+  }
+  private handleDeleteMessage(messageId: string): Response {
+    const nextMessages = (this.state.messages || []).filter(m => m.id !== messageId);
+    this.setState({ ...this.state, messages: nextMessages });
+    return Response.json({ success: true, data: { deleted: messageId } });
   }
 }
