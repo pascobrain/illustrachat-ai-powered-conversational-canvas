@@ -77,7 +77,14 @@ function updateWranglerJsonc() {
 }
 
 function runSetupCommands() {
-    const commands = [];
+    const commands = [
+    "bun add react-markdown@^9.1.0",
+    "bun add remark-gfm@^4.0.0",
+    "bun add rehype-highlight@^7.0.0",
+    "bun add mermaid@^10.9.0",
+    "bun add html2canvas@^1.4.1",
+    "bun add file-saver@^2.0.5"
+];
     
     if (commands.length === 0) {
         console.log('⊘ No setup commands to run');
