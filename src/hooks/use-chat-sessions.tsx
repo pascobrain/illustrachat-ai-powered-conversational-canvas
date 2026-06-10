@@ -10,6 +10,8 @@ interface ChatSessionsState {
   setActiveSessionId: (id: string | null) => void;
   createNewSession: (firstMsg?: string) => Promise<string | null>;
   deleteChatSession: (id: string) => Promise<void>;
+  renameSession: (id: string, title: string) => Promise<void>;
+  clearAllSessions: () => Promise<void>;
 }
 export const useChatSessions = create<ChatSessionsState>((set, get) => ({
   sessions: [],
@@ -56,6 +58,27 @@ export const useChatSessions = create<ChatSessionsState>((set, get) => ({
       toast.success("Session deleted");
     } else {
       toast.error("Failed to delete session");
+    }
+  },
+  renameSession: async (id, title) => {
+    const previousSessions = get().sessions;
+    // Optimistic Update
+    set(state => ({
+      sessions: state.sessions.map(s => s.id === id ? { ...s, title } : s)
+    }));
+    const res = await chatService.updateSessionTitle(id, title);
+    if (!res.success) {
+      set({ sessions: previousSessions });
+      toast.error("Failed to rename session");
+    }
+  },
+  clearAllSessions: async () => {
+    const res = await chatService.clearAllSessions();
+    if (res.success) {
+      set({ sessions: [], activeSessionId: null });
+      toast.success("All conversations cleared");
+    } else {
+      toast.error("Failed to clear conversations");
     }
   }
 }));

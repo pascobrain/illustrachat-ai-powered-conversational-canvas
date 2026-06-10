@@ -1,4 +1,4 @@
-import type { Message, ChatState, ToolCall, WeatherResult, MCPResult, ErrorResult, SessionInfo } from '../../worker/types';
+import type { Message, ChatState, SessionInfo } from '../../worker/types';
 export interface ChatResponse {
   success: boolean;
   data?: ChatState;
@@ -9,12 +9,6 @@ export const MODELS = [
   { id: 'google-ai-studio/gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
 ];
 class ChatService {
-  private sessionId: string;
-  private baseUrl: string;
-  constructor() {
-    this.sessionId = crypto.randomUUID();
-    this.baseUrl = `/api/chat/${this.sessionId}`;
-  }
   async sendMessage(
     sessionId: string,
     message: string,
@@ -94,6 +88,26 @@ class ChatService {
       return await response.json();
     } catch (error) {
       return { success: false, error: 'Failed to delete session' };
+    }
+  }
+  async updateSessionTitle(sessionId: string, title: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/title`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: 'Failed to update session title' };
+    }
+  }
+  async clearAllSessions(): Promise<{ success: boolean; data?: { deletedCount: number }; error?: string }> {
+    try {
+      const response = await fetch('/api/sessions', { method: 'DELETE' });
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: 'Failed to clear all sessions' };
     }
   }
 }

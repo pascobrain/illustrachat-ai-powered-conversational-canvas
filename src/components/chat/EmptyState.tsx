@@ -3,6 +3,7 @@ import { Plus, Sparkles, Zap, Layout, Terminal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 export function EmptyState() {
   const createNew = useChatSessions(s => s.createNewSession);
   return (
@@ -12,13 +13,13 @@ export function EmptyState() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-turquoise/5 blur-[120px] rounded-full" />
         <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-coral-red/5 blur-[100px] rounded-full" />
       </div>
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="relative mb-12"
       >
-        <motion.div 
+        <motion.div
           animate={{ y: [0, -15, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           className="relative z-10"
@@ -33,7 +34,7 @@ export function EmptyState() {
               className="w-32 h-32 relative z-10 drop-shadow-2xl"
             />
           </div>
-          <motion.div 
+          <motion.div
             animate={{ scale: [1, 1.1, 1], rotate: [0, 5, 0] }}
             transition={{ duration: 3, repeat: Infinity }}
             className="absolute -top-6 -right-6 bg-white dark:bg-zinc-800 p-4 rounded-3xl shadow-glow z-20 border border-coral-red/20"
@@ -43,7 +44,7 @@ export function EmptyState() {
         </motion.div>
       </motion.div>
       <div className="max-w-2xl space-y-6">
-        <motion.h2 
+        <motion.h2
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -51,7 +52,7 @@ export function EmptyState() {
         >
           Your Creative <span className="text-illustrative-gradient">Canvas</span>
         </motion.h2>
-        <motion.p 
+        <motion.p
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
@@ -60,7 +61,7 @@ export function EmptyState() {
           The next-gen conversation interface where ideas turn into visual diagrams and clean code in seconds.
         </motion.p>
       </div>
-      <motion.div 
+      <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.4 }}
