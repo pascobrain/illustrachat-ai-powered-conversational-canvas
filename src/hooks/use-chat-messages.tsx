@@ -1,115 +1,67 @@
 import { create } from 'zustand';
 import { chatService } from '@/lib/chat';
-import type { Message } from '@shared/types';
-import { toast } from 'sonner';
+import { Message } from '@/worker/types';
+import { useChatSessions } from './use-chat-sessions';
 interface ChatMessagesState {
   messages: Message[];
   isProcessing: boolean;
   streamingMessage: string | null;
-  currentModel: string | null;
-  abortController: AbortController | null;
   loadMessages: (sessionId: string) => Promise<void>;
-  sendMessage: (sessionId: string, text: string, model?: string) => Promise<void>;
-  stopGeneration: () => void;
-  deleteMessage: (sessionId: string, messageId: string) => Promise<void>;
-  clearCurrentSession: (sessionId: string) => Promise<void>;
+  sendMessage: (sessionId: string, text: string) => Promise<void>;
+  clearMessages: (sessionId: string) => Promise<void>;
 }
 export const useChatMessages = create<ChatMessagesState>((set, get) => ({
   messages: [],
   isProcessing: false,
   streamingMessage: null,
-  currentModel: null,
-  abortController: null,
   loadMessages: async (sessionId: string) => {
     const res = await chatService.getMessages(sessionId);
     if (res.success && res.data) {
-      set({
-        messages: res.data.messages || [],
-        currentModel: res.data.model || null
-      });
+      set({ messages: res.data.messages || [] });
     }
   },
-  sendMessage: async (sessionId: string, text: string, model?: string) => {
-    const controller = new AbortController();
+  sendMessage: async (sessionId: string, text: string) => {
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: 'user',
       content: text,
       timestamp: Date.now()
     };
-    set(state => ({
+    set(state => ({ 
       messages: [...state.messages, userMsg],
       isProcessing: true,
-      streamingMessage: '',
-      abortController: controller
+      streamingMessage: '' 
     }));
     try {
       let accumulated = '';
       const res = await chatService.sendMessage(
-        sessionId,
-        text,
-        model,
+        sessionId, 
+        text, 
+        undefined, 
         (chunk) => {
-          if (controller.signal.aborted) return;
           accumulated += chunk;
           set({ streamingMessage: accumulated });
         }
       );
-      if (res.success && !controller.signal.aborted) {
+      if (res.success) {
+        // Refresh full history to get tool results and final msg
         const fullRes = await chatService.getMessages(sessionId);
         if (fullRes.success && fullRes.data) {
-          set({
+          set({ 
             messages: fullRes.data.messages,
             isProcessing: false,
-            streamingMessage: null,
-            abortController: null,
-            currentModel: fullRes.data.model || model || null
+            streamingMessage: null 
           });
         }
       }
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') {
-        console.error('Failed to send message:', e);
-        toast.error("Message failed to send");
-      }
-      set({ isProcessing: false, streamingMessage: null, abortController: null });
+      set({ isProcessing: false, streamingMessage: null });
     }
   },
-  stopGeneration: () => {
-    const controller = get().abortController;
-    if (controller) {
-      controller.abort();
-      set({ isProcessing: false, streamingMessage: null, abortController: null });
-      toast.info("Generation stopped");
-    }
-  },
-  deleteMessage: async (sessionId, messageId) => {
-    const previousMessages = get().messages;
-    // Optimistic UI update
-    set(state => ({
-      messages: state.messages.filter(m => m.id !== messageId)
-    }));
-    try {
-      const res = await chatService.deleteMessage(sessionId, messageId);
-      if (res.success) {
-        toast.success("Message deleted persistently");
-      } else {
-        throw new Error("Backend delete failed");
-      }
-    } catch (error) {
-      console.error("Failed to delete message on backend", error);
-      // Revert if failed
-      set({ messages: previousMessages });
-      toast.error("Failed to delete message persistently");
-    }
-  },
-  clearCurrentSession: async (sessionId: string) => {
+  clearMessages: async (sessionId: string) => {
     const res = await chatService.clearMessages(sessionId);
     if (res.success) {
       set({ messages: [] });
-      toast.success("Session history cleared");
-    } else {
-      toast.error("Failed to clear session history");
     }
   }
 }));
