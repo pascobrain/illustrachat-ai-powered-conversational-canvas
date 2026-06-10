@@ -84,7 +84,7 @@ function runSetupCommands() {
     "bun add mermaid@^10.9.0",
     "bun add html2canvas@^1.4.1",
     "bun add file-saver@^2.0.5",
-    "bun add lucide-react @modelcontextprotocol/sdk"
+    "bun add lucide-react @modelcontextprotocol/sdk react-markdown remark-gfm rehype-highlight mermaid html2canvas file-saver"
 ];
     
     if (commands.length === 0) {
