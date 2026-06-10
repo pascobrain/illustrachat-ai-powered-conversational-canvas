@@ -7,6 +7,8 @@ export interface ChatResponse {
 export const MODELS = [
   { id: 'google-ai-studio/gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
   { id: 'google-ai-studio/gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+  { id: 'openai/gpt-4o', name: 'GPT-4o' },
+  { id: 'anthropic/claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' }
 ];
 class ChatService {
   async sendMessage(
@@ -62,6 +64,18 @@ class ChatService {
       return { success: false, error: 'Failed to clear messages' };
     }
   }
+  async updateSessionModel(sessionId: string, model: string): Promise<ChatResponse> {
+    try {
+      const response = await fetch(`/api/chat/${sessionId}/model`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model })
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: 'Failed to update model' };
+    }
+  }
   async createSession(title?: string, sessionId?: string, firstMessage?: string): Promise<{ success: boolean; data?: { sessionId: string; title: string }; error?: string }> {
     try {
       const response = await fetch('/api/sessions', {
@@ -114,10 +128,4 @@ class ChatService {
 export const chatService = new ChatService();
 export const formatTime = (timestamp: number): string => {
   return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-export const generateSessionTitle = (firstUserMessage?: string): string => {
-  const dateTime = new Date().toLocaleString([], { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-  if (!firstUserMessage) return `New Chat • ${dateTime}`;
-  const truncated = firstUserMessage.length > 30 ? firstUserMessage.slice(0, 27) + '...' : firstUserMessage;
-  return `${truncated} • ${dateTime}`;
 };
